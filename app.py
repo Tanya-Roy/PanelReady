@@ -59,6 +59,57 @@ INTERVIEW_QUESTION_CATEGORIES = {
     "behavioral_teamwork",
     "motivation_and_growth",
 }
+INTERVIEW_ROUNDS = (
+    {
+        "number": 1,
+        "name": "Technical interview",
+        "interviewer": "Technical lead",
+        "categories": {
+            "role_fundamentals",
+            "job_description_skill",
+            "debugging_and_testing",
+            "design_and_tradeoffs",
+        },
+        "focus": (
+            "Assess role fundamentals, relevant skills, debugging and testing, "
+            "and technical design trade-offs."
+        ),
+    },
+    {
+        "number": 2,
+        "name": "Behavioral interview",
+        "interviewer": "HR interviewer",
+        "categories": {
+            "personal_contribution",
+            "behavioral_teamwork",
+            "motivation_and_growth",
+        },
+        "focus": (
+            "Assess communication, personal ownership, teamwork, motivation, "
+            "and learning. Ask for specific examples without assuming the "
+            "candidate has experience they have not described."
+        ),
+    },
+    {
+        "number": 3,
+        "name": "Hiring manager interview",
+        "interviewer": "Hiring manager",
+        "categories": {
+            "resume_project",
+            "problem_solving",
+            "practical_scenario",
+        },
+        "focus": (
+            "Assess the candidate's resume evidence, practical judgment, and "
+            "approach to role-relevant problems."
+        ),
+    },
+)
+INTERVIEW_ROUND_BY_CATEGORY = {
+    category: interview_round
+    for interview_round in INTERVIEW_ROUNDS
+    for category in interview_round["categories"]
+}
 
 app = FastAPI(title="Panel Ready", docs_url=None, redoc_url=None)
 logger = logging.getLogger(__name__)
@@ -618,7 +669,7 @@ def create_interview_plan(
     role: sqlite3.Row,
     profile: sqlite3.Row,
     sources: list[dict[str, str]],
-) -> list[dict[str, str]]:
+) -> list[dict[str, Any]]:
     categories = sorted(INTERVIEW_QUESTION_CATEGORIES)
     prompt = (
         "Create exactly 10 concise, distinct mock interview questions for this "
@@ -659,7 +710,7 @@ def create_interview_plan(
     questions = data.get("questions")
     if not isinstance(questions, list) or len(questions) != len(INTERVIEW_QUESTION_CATEGORIES):
         raise HTTPException(status_code=502, detail="Groq did not return exactly 10 interview questions. Please retry.")
-    plan: list[dict[str, str]] = []
+    plan: list[dict[str, Any]] = []
     for item in questions:
         if not isinstance(item, dict):
             raise HTTPException(status_code=502, detail="Groq returned an invalid interview question. Please retry.")
@@ -702,8 +753,77 @@ def create_interview_plan(
         or len(set(normalized_projects)) != len(normalized_projects)
     ):
         raise HTTPException(status_code=502, detail="Groq returned repeated questions or topics. Please retry.")
-    random.shuffle(plan)
-    return plan
+    return assign_interview_rounds(plan)
+
+
+def assign_interview_rounds(
+    plan: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    questions_by_round = []
+    for interview_round in INTERVIEW_ROUNDS:
+        round_questions = [
+            item
+            for item in plan
+            if item["category"] in interview_round["categories"]
+        ]
+        random.shuffle(round_questions)
+        for item in round_questions:
+            questions_by_round.append(
+                {
+                    **item,
+                    "round_number": interview_round["number"],
+                    "round_name": interview_round["name"],
+                    "interviewer": interview_round["interviewer"],
+                }
+            )
+    return questions_by_round
+
+
+def question_round(question: dict[str, Any]) -> dict[str, Any]:
+    interview_round = INTERVIEW_ROUND_BY_CATEGORY.get(question.get("category"))
+    if interview_round is None:
+        raise HTTPException(
+            status_code=409,
+            detail="An interview question is missing its panel round. Start a new interview.",
+        )
+    return interview_round
+
+
+def question_round_progress(
+    plan: list[dict[str, Any]], plan_index: int
+) -> dict[str, Any]:
+    interview_round = question_round(plan[plan_index])
+    round_indices = [
+        index
+        for index, question in enumerate(plan)
+        if question_round(question)["number"] == interview_round["number"]
+    ]
+    return {
+        "number": interview_round["number"],
+        "name": interview_round["name"],
+        "interviewer": interview_round["interviewer"],
+        "question_number": round_indices.index(plan_index) + 1,
+        "question_count": len(round_indices),
+    }
+
+
+def annotate_interview_rounds(
+    transcript: list[dict[str, Any]],
+    plan: list[dict[str, Any]],
+) -> None:
+    current_round: dict[str, Any] | None = None
+    for turn in transcript:
+        if turn["speaker"] == "interviewer":
+            plan_index = turn.get("plan_index")
+            if isinstance(plan_index, int) and 0 <= plan_index < len(plan):
+                current_round = question_round(plan[plan_index])
+                turn["round_number"] = current_round["number"]
+                turn["round_name"] = current_round["name"]
+                turn["interviewer"] = current_round["interviewer"]
+        elif turn["speaker"] == "candidate" and current_round:
+            turn.setdefault("round_number", current_round["number"])
+            turn.setdefault("round_name", current_round["name"])
+            turn.setdefault("interviewer", current_round["interviewer"])
 
 
 def normalize_project_name(project: str) -> str:
@@ -722,7 +842,7 @@ def count_planned_answers(transcript: list[dict[str, Any]]) -> int:
 
 def annotate_legacy_transcript(
     transcript: list[dict[str, Any]],
-    plan: list[dict[str, str]],
+    plan: list[dict[str, Any]],
 ) -> None:
     current_index: int | None = None
     current_kind = "planned"
@@ -793,7 +913,7 @@ def candidate_says_unknown_or_unfinished(answer: str) -> bool:
 
 
 def choose_next_interview_question(
-    plan: list[dict[str, str]],
+    plan: list[dict[str, Any]],
     transcript: list[dict[str, Any]],
     answer: str,
     coaching: dict[str, Any],
@@ -891,11 +1011,15 @@ def start_interview(
         )
     plan = create_interview_plan(role, profile, sources)
     first_question = plan[0]["question"]
+    first_round = question_round(plan[0])
     interview_id = secrets.token_urlsafe(16)
     transcript = [{
         "speaker": "interviewer",
         "question_kind": "planned",
         "plan_index": 0,
+        "round_number": first_round["number"],
+        "round_name": first_round["name"],
+        "interviewer": first_round["interviewer"],
         "text": first_question,
     }]
     with db_connect() as connection:
@@ -920,6 +1044,8 @@ def start_interview(
         "status": "active",
         "question": first_question,
         "question_count": len(plan),
+        "round": question_round_progress(plan, 0),
+        "interviewer": question_round(plan[0])["interviewer"],
         "sources": sources,
         "research_warning": research_warning,
     }
@@ -946,6 +1072,7 @@ def generate_answer_coaching(
     profile: sqlite3.Row,
     transcript: list[dict[str, Any]],
     sources: list[dict[str, str]],
+    interview_round: dict[str, Any],
 ) -> dict[str, Any]:
     latest_answer = next(
         (turn["text"] for turn in reversed(transcript) if turn["speaker"] == "candidate"),
@@ -961,10 +1088,12 @@ def generate_answer_coaching(
             "concept_explanation": "",
             "follow_up_question": "",
         }
-    error_message = "The interview coach returned an invalid answer review. Retry the next question."
+    error_message = "The interview panel returned an invalid answer review. Retry the next question."
     prompt = (
-        "You are an experienced technical interviewer and hiring manager conducting "
-        "a realistic, personalized interview. Return ONLY valid JSON with exactly "
+        f"You are the {interview_round['interviewer']} conducting the "
+        f"{interview_round['name']} in a three-round interview panel. "
+        f"Your focus for this round: {interview_round['focus']} "
+        "Conduct a realistic, personalized interview. Return ONLY valid JSON with exactly "
         "these keys and types:\n"
         '{"score":7,"assessment":"correct_shallow","got_right":"brief grounded feedback",'
         '"missing":"specific missing or incorrect points; empty string if none",'
@@ -1033,10 +1162,12 @@ def generate_answer_coaching(
     }
 
 
-def format_answer_coaching(coaching: dict[str, Any]) -> str:
+def format_answer_coaching(
+    coaching: dict[str, Any], interviewer: str
+) -> str:
     assessment = coaching["assessment"].replace("_", " ").title()
     parts = [
-        f"Answer review · {coaching['score']}/10 · {assessment}",
+        f"{interviewer} review · {coaching['score']}/10 · {assessment}",
         f"What you got right: {coaching['got_right']}",
     ]
     if coaching["missing"]:
@@ -1081,6 +1212,7 @@ def answer_interview(
                 (json.dumps(plan, ensure_ascii=False), interview_id, user["id"]),
             )
     annotate_legacy_transcript(transcript, plan)
+    annotate_interview_rounds(transcript, plan)
     if (
         not isinstance(previous_question.get("plan_index"), int)
         or not 0 <= previous_question["plan_index"] < len(plan)
@@ -1093,14 +1225,35 @@ def answer_interview(
     answered_before = count_planned_answers(transcript)
     if answered_before >= len(plan) and not answered_follow_up:
         raise HTTPException(status_code=409, detail="All 10 interview questions are complete. Finish the interview to view your report.")
-    transcript.append({"speaker": "candidate", "text": answer})
+    current_round = question_round(plan[previous_question["plan_index"]])
+    transcript.append(
+        {
+            "speaker": "candidate",
+            "text": answer,
+            "round_number": current_round["number"],
+            "round_name": current_round["name"],
+            "interviewer": current_round["interviewer"],
+        }
+    )
     with db_connect() as connection:
         connection.execute(
             "UPDATE interviews SET transcript_json = ? WHERE id = ? AND user_id = ?",
             (json.dumps(transcript, ensure_ascii=False), interview_id, user["id"]),
         )
-    coaching = generate_answer_coaching(role, profile, transcript, sources)
-    transcript.append({"speaker": "coach", "text": format_answer_coaching(coaching)})
+    coaching = generate_answer_coaching(
+        role, profile, transcript, sources, current_round
+    )
+    transcript.append(
+        {
+            "speaker": "coach",
+            "interviewer": current_round["interviewer"],
+            "round_number": current_round["number"],
+            "round_name": current_round["name"],
+            "text": format_answer_coaching(
+                coaching, current_round["interviewer"]
+            ),
+        }
+    )
     next_question, question_kind, answered, next_index = choose_next_interview_question(
         plan, transcript, answer, coaching, answered_follow_up
     )
@@ -1109,6 +1262,9 @@ def answer_interview(
             "speaker": "interviewer",
             "question_kind": question_kind or "planned",
             "plan_index": next_index,
+            "round_number": question_round(plan[next_index])["number"],
+            "round_name": question_round(plan[next_index])["name"],
+            "interviewer": question_round(plan[next_index])["interviewer"],
             "text": next_question,
         })
     with db_connect() as connection:
@@ -1118,11 +1274,21 @@ def answer_interview(
         )
     return {
         **coaching,
+        "answered_round": {
+            "number": current_round["number"],
+            "name": current_round["name"],
+            "interviewer": current_round["interviewer"],
+        },
         "question": next_question,
         "question_kind": question_kind,
         "completed_questions": answered,
         "total_questions": len(plan),
         "question_number": (next_index + 1) if next_index is not None else len(plan),
+        "round": (
+            question_round_progress(plan, next_index)
+            if next_index is not None
+            else None
+        ),
         "interview_complete": next_question is None,
     }
 
@@ -1162,6 +1328,7 @@ def retry_interview_followup(
                 (json.dumps(plan, ensure_ascii=False), interview_id, user["id"]),
             )
     annotate_legacy_transcript(transcript, plan)
+    annotate_interview_rounds(transcript, plan)
     if (
         not isinstance(previous_question.get("plan_index"), int)
         or not 0 <= previous_question["plan_index"] < len(plan)
@@ -1171,8 +1338,21 @@ def retry_interview_followup(
             detail="The current question is not in this interview plan. Start a new interview.",
         )
     answered_follow_up = previous_question.get("question_kind") == "follow_up"
-    coaching = generate_answer_coaching(role, profile, transcript, sources)
-    transcript.append({"speaker": "coach", "text": format_answer_coaching(coaching)})
+    current_round = question_round(plan[previous_question["plan_index"]])
+    coaching = generate_answer_coaching(
+        role, profile, transcript, sources, current_round
+    )
+    transcript.append(
+        {
+            "speaker": "coach",
+            "interviewer": current_round["interviewer"],
+            "round_number": current_round["number"],
+            "round_name": current_round["name"],
+            "text": format_answer_coaching(
+                coaching, current_round["interviewer"]
+            ),
+        }
+    )
     next_question, question_kind, answered, next_index = choose_next_interview_question(
         plan, transcript, answer, coaching, answered_follow_up
     )
@@ -1181,6 +1361,9 @@ def retry_interview_followup(
             "speaker": "interviewer",
             "question_kind": question_kind or "planned",
             "plan_index": next_index,
+            "round_number": question_round(plan[next_index])["number"],
+            "round_name": question_round(plan[next_index])["name"],
+            "interviewer": question_round(plan[next_index])["interviewer"],
             "text": next_question,
         })
     with db_connect() as connection:
@@ -1190,11 +1373,21 @@ def retry_interview_followup(
         )
     return {
         **coaching,
+        "answered_round": {
+            "number": current_round["number"],
+            "name": current_round["name"],
+            "interviewer": current_round["interviewer"],
+        },
         "question": next_question,
         "question_kind": question_kind,
         "completed_questions": answered,
         "total_questions": len(plan),
         "question_number": (next_index + 1) if next_index is not None else len(plan),
+        "round": (
+            question_round_progress(plan, next_index)
+            if next_index is not None
+            else None
+        ),
         "interview_complete": next_question is None,
     }
 
@@ -1276,12 +1469,19 @@ def parse_review_response(
 def analyze_interview(
     role: sqlite3.Row,
     profile: sqlite3.Row,
-    transcript: list[dict[str, str]],
+    transcript: list[dict[str, Any]],
     sources: list[dict[str, str]],
 ) -> dict[str, Any]:
     error_message = "The final interview report was invalid. Try finishing again."
     prompt = (
-        "Act as an experienced interviewer and assess this candidate for the role "
+        "Assess this candidate's interview for the role. The planned panel has "
+        "three rounds: the Technical lead covers role fundamentals and technical "
+        "judgment, the HR interviewer covers communication, ownership, teamwork, "
+        "and motivation, and the Hiring manager covers resume evidence, problem "
+        "solving, and practical judgment. Use the round and interviewer labels "
+        "in the transcript when describing evidence. Only assess rounds and "
+        "questions that actually appear in the transcript. Assess the candidate "
+        "for the role "
         "using the supplied resume, job description, and interview transcript. "
         "Return ONLY valid JSON with this exact shape:\n"
         '{"report":{"overall_score":68,"readiness":"brief evidence-based estimate",'

@@ -103,6 +103,7 @@
     .bubble { max-width: 88%; padding: 13px 15px; border-radius: 7px; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
     .bubble.interviewer { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid #d18154; }
     .bubble.candidate { background: #e7f0e9; justify-self: end; }
+    .bubble.round-divider { max-width: 100%; justify-self: stretch; padding: 8px 12px; background: #edf1e9; border: 1px solid var(--line); color: var(--muted); text-align: center; font-size: 12px; }
     .speaker { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; display: block; margin-bottom: 4px; }
     .answer-box { border-top: 1px solid var(--line); padding-top: 14px; }
     .answer-box textarea { min-height: 110px; }
@@ -187,7 +188,7 @@
             </section>
           </div>
           <section class="card" style="margin-top:15px">
-            <div class="between"><div><h2>Your saved roles</h2><p class="muted small">Choose Start Prep to begin a voice or typed mock interview.</p></div></div>
+            <div class="between"><div><h2>Your saved roles</h2><p class="muted small">Choose Start 3-round panel to begin a voice or typed mock interview.</p></div></div>
             <div id="saved-roles" class="role-list"></div>
           </section>
         </section>
@@ -217,10 +218,10 @@
         <section id="view-interview" class="view">
           <div class="interview-shell">
             <div class="interview-head between">
-              <div><h1 id="interview-title">Mock interview</h1><p id="interview-subtitle" class="muted small"></p><p id="interview-progress" class="muted small">Question 1 of 10</p></div>
-              <button id="finish-interview" class="btn danger">End interview · Track progress</button>
+              <div><h1 id="interview-title">Three-round interview panel</h1><p id="interview-subtitle" class="muted small"></p><p id="interview-progress" class="muted small">Round 1 of 3 · Technical lead</p></div>
+              <button id="finish-interview" class="btn danger">End panel · Track progress</button>
             </div>
-            <div class="notice">This interview has 10 personalized questions in different topics, shuffled for variety. Groq scores each answer and may ask one follow-up when clarification would help; if you say you don’t know or haven’t done something, it moves on. Speak naturally or type your answer. Browser speech recognition may use browser-provider services. Don't share confidential information.</div>
+            <div class="notice">The interview has three rounds: a Technical lead asks about role skills and technical decisions, an HR interviewer asks about communication, teamwork and motivation, and a Hiring manager asks about your resume and practical judgment. Each round has tailored questions. You may get one follow-up when clarification would help. Say if you do not know or have not done something; the panel will move on. Type or speak your answers. Browser speech recognition may use browser-provider services. Do not share confidential information.</div>
             <div id="interview-alert" class="alert" role="alert"></div>
             <div id="interview-chat" class="chat" aria-live="polite"></div>
             <form id="answer-form" class="answer-box">
@@ -269,6 +270,8 @@
     let retryNeeded = false;
     let interviewQuestionSetComplete = false;
     let interviewQuestionNumber = 1;
+    let interviewQuestionCount = 10;
+    let activeRound = null;
 
     function showAlert(target, message) {
       const element = $(target);
@@ -480,7 +483,7 @@
         });
         event.target.reset();
         await loadRoles();
-        showSuccess("#global-alert", "Role saved. Start Prep when your profile and resume are ready.");
+        showSuccess("#global-alert", "Role saved. Start the 3-round panel when your profile and resume are ready.");
       } catch (error) { showAlert("#global-alert", error.message); }
     });
     async function loadRoles() {
@@ -497,7 +500,7 @@
               <div class="muted small">${escapeHtml(role.location || "Location not specified")} · ${role.interview_count} mock interview${role.interview_count === 1 ? "" : "s"}</div>
               ${url ? `<a class="small" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">View job posting ↗</a>` : ""}
             </div>
-            <button class="btn primary" data-start-role="${escapeHtml(role.id)}">Start Prep</button>
+            <button class="btn primary" data-start-role="${escapeHtml(role.id)}">Start 3-round panel</button>
           </article>`;
         }).join("");
         $("#saved-roles").querySelectorAll("[data-start-role]").forEach(button =>
@@ -523,16 +526,25 @@
           body: JSON.stringify({ role_id: roleId })
         });
         activeInterviewId = interview.id;
-        activeTranscript = [{ speaker: "interviewer", question_kind: "planned", text: interview.question }];
+        activeTranscript = [{
+          speaker: "interviewer",
+          question_kind: "planned",
+          round_number: interview.round.number,
+          round_name: interview.round.name,
+          interviewer: interview.interviewer,
+          text: interview.question
+        }];
         retryNeeded = false;
         interviewQuestionSetComplete = false;
         interviewQuestionNumber = 1;
+        interviewQuestionCount = interview.question_count;
+        activeRound = interview.round;
         $("#final-report").hidden = true;
         $("#answer-text").disabled = false;
         $("#send-answer").disabled = false;
         $("#mic-button").disabled = false;
         const role = savedRoles.find(item => item.id === roleId);
-        $("#interview-title").textContent = "Mock interview";
+        $("#interview-title").textContent = "Three-round interview panel";
         $("#interview-subtitle").textContent = `${role?.title || ""} · ${role?.company || "General prep"}`;
         $("#answer-text").value = "";
         updateInterviewProgress();
@@ -547,17 +559,25 @@
         speak(interview.question);
       } catch (error) {
         const message = error.message === "Could not retrieve public research. Check your connection and retry."
-          ? "The server is still running an older version of Panel Ready. In its PowerShell window, press Ctrl+C, then restart it from the project folder using the commands in START-HERE.txt. Refresh this page and try Start Prep again."
+          ? "Public research could not be retrieved. Restart the server using the local run command in README.md, refresh this page, and try again."
           : error.message;
         showAlert("#global-alert", message);
       } finally {
-        if (button) { button.disabled = false; button.textContent = "Start Prep"; }
+        if (button) { button.disabled = false; button.textContent = "Start 3-round panel"; }
       }
     }
     function renderChat() {
       $("#interview-chat").innerHTML = activeTranscript.map(turn => {
-        const speaker = turn.speaker === "candidate" ? "You" : turn.speaker === "coach" ? "Coach feedback" : "Interviewer";
-        return `<div class="bubble ${turn.speaker === "candidate" ? "candidate" : "interviewer"}"><span class="speaker">${speaker}</span>${escapeHtml(turn.text)}</div>`;
+        let speaker;
+        if (turn.speaker === "round") speaker = "Interview panel";
+        else if (turn.speaker === "candidate") speaker = "You";
+        else if (turn.interviewer) {
+          speaker = `${turn.interviewer}${turn.speaker === "coach" ? " feedback" : ""}`;
+        } else speaker = turn.speaker === "coach" ? "Coach feedback" : "Interviewer";
+        const bubbleClass = turn.speaker === "candidate"
+          ? "candidate"
+          : turn.speaker === "round" ? "round-divider" : "interviewer";
+        return `<div class="bubble ${bubbleClass}"><span class="speaker">${speaker}</span>${escapeHtml(turn.text)}</div>`;
       }
       ).join("");
       $("#interview-chat").scrollTop = $("#interview-chat").scrollHeight;
@@ -566,24 +586,41 @@
       interviewQuestionSetComplete = completed;
       const latestQuestion = [...activeTranscript].reverse().find(turn => turn.speaker === "interviewer");
       $("#interview-progress").textContent = completed
-        ? "All 10 planned questions complete. End the interview to see your report."
-        : latestQuestion?.question_kind === "follow_up"
-          ? `Follow-up for question ${interviewQuestionNumber} of 10`
-          : `Question ${Math.min(interviewQuestionNumber, 10)} of 10`;
+        ? "All three rounds are complete. End the panel to see your report."
+        : activeRound
+          ? `Round ${activeRound.number} of 3 · ${activeRound.name} (${activeRound.interviewer}) · ${latestQuestion?.question_kind === "follow_up" ? "Follow-up for " : ""}Question ${activeRound.question_number} of ${activeRound.question_count} in this round (${Math.min(interviewQuestionNumber, interviewQuestionCount)} of ${interviewQuestionCount} overall)`
+          : `Question ${Math.min(interviewQuestionNumber, interviewQuestionCount)} of ${interviewQuestionCount}`;
       if (completed) {
         $("#answer-text").disabled = true;
         $("#send-answer").disabled = true;
         $("#mic-button").disabled = true;
-        $("#mic-status").textContent = "The 10-topic interview is complete. End the interview to view your report.";
+        $("#mic-status").textContent = "All three rounds are complete. End the panel to view your report.";
       }
     }
     function appendCoachingResult(result) {
       interviewQuestionNumber = result.question_number;
-      activeTranscript.push({ speaker: "coach", text: formatCoaching(result) });
+      if (result.round) activeRound = result.round;
+      const latestQuestion = [...activeTranscript].reverse().find(turn => turn.speaker === "interviewer");
+      activeTranscript.push({
+        speaker: "coach",
+        round_number: result.answered_round?.number ?? latestQuestion?.round_number,
+        round_name: result.answered_round?.name ?? latestQuestion?.round_name,
+        interviewer: result.answered_round?.interviewer ?? latestQuestion?.interviewer,
+        text: formatCoaching(result)
+      });
       if (result.question) {
+        if (result.round && result.round.number !== result.answered_round?.number) {
+          activeTranscript.push({
+            speaker: "round",
+            text: `Round ${result.round.number}: ${result.round.name} with ${result.round.interviewer}`
+          });
+        }
         activeTranscript.push({
           speaker: "interviewer",
           question_kind: result.question_kind || "planned",
+          round_number: result.round?.number ?? latestQuestion?.round_number,
+          round_name: result.round?.name ?? latestQuestion?.round_name,
+          interviewer: result.round?.interviewer ?? latestQuestion?.interviewer,
           text: result.question
         });
       }
@@ -600,7 +637,7 @@
         not_answered: "Not answered"
       };
       const lines = [
-        `Answer review · ${result.score}/10 · ${labels[result.assessment] || "Reviewed"}`,
+        `${result.answered_round?.interviewer || "Panelist"} review · ${result.score}/10 · ${labels[result.assessment] || "Reviewed"}`,
         `What you got right: ${result.got_right}`,
         result.missing ? `What to improve: ${result.missing}` : "",
         `Stronger answer example: ${result.stronger_answer}`,
@@ -796,7 +833,7 @@
         showAlert("#interview-alert", "Answer at least one question before ending the interview.");
         return;
       }
-      if (!confirm("End this mock interview and generate your final role-readiness report and evidence-based progress blocks?")) return;
+      if (!confirm("End this three-round panel and generate your final role-readiness report and evidence-based progress blocks?")) return;
       clearAlert("#interview-alert");
       setBusy(true);
       $("#finish-interview").textContent = "Analyzing…";
@@ -808,7 +845,7 @@
       } catch (error) { showAlert("#interview-alert", error.message); }
       finally {
         setBusy(false);
-        $("#finish-interview").textContent = "End interview · Track progress";
+        $("#finish-interview").textContent = "End panel · Track progress";
       }
     });
     function renderFinalReport(report) {
