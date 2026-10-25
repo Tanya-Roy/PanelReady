@@ -44,9 +44,6 @@ Set `GROQ_API_KEY` in `.env`, then start the app:
 .\.venv\Scripts\python.exe -m uvicorn app:app --host 127.0.0.1 --port 8000
 ```
 
-Open <http://127.0.0.1:8000>. Keep `.env` private; it is not part of the
-repository.
-
 ## Data and limitations
 
 The app stores profile and interview data in SQLite. Resume/profile details,
