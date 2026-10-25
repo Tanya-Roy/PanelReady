@@ -17,7 +17,7 @@ jobs:
           python-version: "3.13"
           cache: pip
       - run: python -m pip install -r requirements.txt
-      - run: python -m compileall -q app.py
+      - run: python -m compileall -q app.py panel.py
       - name: Check application startup
         env:
           DATABASE_PATH: ${{ runner.temp }}/interview_app.sqlite3
