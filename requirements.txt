@@ -1,0 +1,7 @@
+crewai[litellm]==1.15.27
+python-dotenv==1.2.2
+ddgs>=9,<10
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30,<1
+python-multipart>=0.0.9,<1
+pypdf>=5,<7

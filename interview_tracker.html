@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panel Ready | Interview Prep</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f1e8;
+      --surface: #fffdf8;
+      --ink: #20312e;
+      --muted: #687772;
+      --line: #dce2da;
+      --accent: #c65336;
+      --accent-dark: #a9422a;
+      --soft: #f8e9df;
+      --green: #267454;
+      --red: #b3473c;
+      font-family: "Aptos", "Trebuchet MS", "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--ink); background: var(--bg); }
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+    .topbar { background: #203b36; border-bottom: 3px solid #d18154; position: sticky; top: 0; z-index: 5; }
+    .topbar-inner { max-width: 1180px; margin: auto; padding: 13px 22px; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+    .brand { color: #fffdf8; font-family: Georgia, "Times New Roman", serif; font-weight: 700; font-size: 20px; letter-spacing: -.035em; }
+    .brand span { color: #edaa7e; }
+    .auth-screen .brand { color: var(--ink); }
+    .auth-screen .brand span { color: var(--accent); }
+    .auth-screen .brand::before { content: "P"; display: inline-grid; place-items: center; width: 27px; height: 27px; margin-right: 8px; border: 1px solid #d18154; border-radius: 7px 7px 7px 2px; color: var(--accent); font-size: 16px; }
+    .topbar .brand { white-space: nowrap; }
+    .topbar .brand span { color: #edaa7e; }
+    .topbar .brand::before { content: "P"; display: inline-grid; place-items: center; width: 27px; height: 27px; margin-right: 8px; border: 1px solid #edaa7e; border-radius: 7px 7px 7px 2px; color: #edaa7e; font-size: 16px; }
+    .nav { display: flex; align-items: center; gap: 6px; }
+    .nav button { border: 0; background: transparent; padding: 9px 11px; color: #d1dfd8; border-radius: 5px; font-weight: 650; }
+    .nav button:hover, .nav button.active { background: #31524a; color: #fff3e8; }
+    .user-tools { display: flex; align-items: center; gap: 11px; color: #d1dfd8; font-size: 13px; }
+    .wrap { max-width: 1180px; margin: auto; padding: 27px 22px 56px; }
+    .hero { margin: 6px 0 22px; padding: 5px 0 5px 17px; border-left: 3px solid #d18154; }
+    h1, h2 { font-family: Georgia, "Times New Roman", serif; }
+    h1 { font-size: clamp(28px,4vw,39px); font-weight: 600; letter-spacing: -.035em; margin: 0 0 8px; }
+    h2 { font-size: 22px; font-weight: 600; letter-spacing: -.02em; margin: 0 0 7px; }
+    h3 { margin: 0; font-size: 15px; }
+    p { line-height: 1.55; }
+    .muted { color: var(--muted); }
+    .small { font-size: 12px; }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 20px; box-shadow: 0 5px 18px #23372c0a; }
+    .grid { display: grid; gap: 15px; }
+    .grid.two { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .grid.three { grid-template-columns: repeat(3,minmax(0,1fr)); }
+    .field { display: grid; gap: 6px; margin: 12px 0; }
+    .field label { font-size: 12px; color: var(--muted); font-weight: 650; }
+    input, textarea, select { width: 100%; border: 1px solid #d5ddd5; border-radius: 6px; padding: 11px 12px; color: var(--ink); background: #fffefa; outline: none; }
+    input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px #c653361c; }
+    textarea { min-height: 105px; resize: vertical; line-height: 1.5; }
+    .btn { border: 1px solid #cbd6ce; background: #fffefa; color: var(--ink); padding: 9px 13px; border-radius: 6px; font-size: 13px; font-weight: 700; transition: background .15s ease, border-color .15s ease, transform .15s ease; }
+    .btn:hover { border-color: #d18154; color: var(--accent-dark); transform: translateY(-1px); }
+    .btn.primary { color: white; border-color: var(--accent); background: var(--accent); }
+    .btn.primary:hover { background: var(--accent-dark); }
+    .topbar .btn { background: transparent; color: #fff3e8; border-color: #668078; }
+    .topbar .btn:hover { background: #31524a; border-color: #edaa7e; color: white; }
+    .btn.danger { color: var(--red); }
+    .btn:disabled { opacity: .55; cursor: not-allowed; }
+    .row { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+    .between { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .notice { padding: 11px 14px; border: 1px solid #e8c9b5; background: #fbf1e8; border-radius: 6px; color: #764b39; font-size: 12px; line-height: 1.5; }
+    .alert { display: none; padding: 10px 12px; background: #fff2ef; border: 1px solid #f0cbc4; color: #8e3934; border-radius: 9px; margin: 10px 0; font-size: 13px; }
+    .alert.show { display: block; }
+    .alert.success { background: #eaf4ed; border-color: #c5dfca; color: #276344; }
+    .view { display: none; }
+    .view.active { display: block; }
+    .auth-screen { max-width: 450px; margin: 8vh auto; }
+    .auth-tabs { display: flex; gap: 8px; margin-bottom: 18px; }
+    .auth-tabs button { flex: 1; }
+    .role-search { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+    .results, .role-list, .review-list { display: grid; gap: 11px; margin-top: 14px; }
+    .result, .role-card { border: 1px solid var(--line); background: var(--surface); border-radius: 7px; padding: 15px; }
+    .result h3 { margin-bottom: 6px; line-height: 1.4; }
+    .result p { font-size: 13px; color: var(--muted); margin: 8px 0; }
+    a { color: var(--accent-dark); }
+    .role-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .role-card h3 { margin-bottom: 4px; }
+    .stats { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; margin: 14px 0 17px; }
+    .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 13px; }
+    .stat strong { font-size: 20px; display: block; margin-bottom: 2px; }
+    .stat span { color: var(--muted); font-size: 12px; }
+    .progress-track { height: 9px; background: #e3e7df; border-radius: 20px; overflow: hidden; margin: 12px 0 8px; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg,#c65336,#e3a06d); width: 0; transition: width .2s ease; }
+    .review-category { margin-top: 17px; }
+    .review-category-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 2px; }
+    .review-item { display: grid; grid-template-columns: 24px 1fr; gap: 11px; background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 14px; margin-bottom: 9px; }
+    .review-item.completed { opacity: .72; }
+    .review-item input { width: 17px; height: 17px; margin: 2px 0 0; accent-color: var(--accent); }
+    .review-item h3 { margin-bottom: 6px; }
+    .review-item p { margin: 5px 0; font-size: 13px; line-height: 1.5; }
+    .sources { margin: 7px 0 0; padding-left: 17px; font-size: 12px; }
+    .empty { padding: 23px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 12px; background: white; }
+    .interview-shell { max-width: 850px; margin: auto; }
+    .interview-head { margin-bottom: 13px; }
+    .chat { display: grid; gap: 12px; max-height: 52vh; overflow: auto; padding: 4px 2px 14px; }
+    .bubble { max-width: 88%; padding: 13px 15px; border-radius: 7px; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
+    .bubble.interviewer { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid #d18154; }
+    .bubble.candidate { background: #e7f0e9; justify-self: end; }
+    .speaker { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; display: block; margin-bottom: 4px; }
+    .answer-box { border-top: 1px solid var(--line); padding-top: 14px; }
+    .answer-box textarea { min-height: 110px; }
+    .progress-label { font-weight: 750; font-size: 12px; }
+    .source-list { font-size: 12px; line-height: 1.7; margin: 7px 0 0; }
+    .privacy { font-size: 11px; color: var(--muted); line-height: 1.5; margin-top: 14px; }
+    @media (max-width: 760px) {
+      .topbar-inner { flex-wrap: wrap; padding: 11px 14px; }
+      .nav { order: 3; width: 100%; overflow-x: auto; }
+      .nav button { white-space: nowrap; }
+      .user-tools { margin-left: auto; }
+      .wrap { padding: 20px 13px 40px; }
+      .grid.two, .grid.three { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .role-card { align-items: flex-start; flex-direction: column; }
+      .bubble { max-width: 96%; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <section id="auth-view" class="auth-screen card">
+      <div class="brand" style="margin-bottom:8px">Panel<span> Ready</span> · Interview Prep</div>
+      <h1 style="font-size:25px">Your interview, your preparation</h1>
+      <p class="muted small">Create an account to keep your profile, interviews, and progress on this device.</p>
+      <div id="auth-alert" class="alert" role="alert"></div>
+      <div class="auth-tabs">
+        <button id="show-login" class="btn primary">Log in</button>
+        <button id="show-signup" class="btn">Create account</button>
+      </div>
+      <form id="auth-form">
+        <div class="field"><label for="auth-email">Email</label><input id="auth-email" type="email" autocomplete="email" required maxlength="254"></div>
+        <div class="field"><label for="auth-password">Password (at least 12 characters)</label><input id="auth-password" type="password" autocomplete="current-password" required minlength="12" maxlength="256"></div>
+        <button id="auth-submit" class="btn primary" type="submit" style="width:100%">Log in</button>
+      </form>
+      <p class="privacy">This local prototype is not a public hosted service. Your profile and interview records are stored in a local SQLite database. Resume and interview content is sent to Groq when the coach analyzes it. Do not put highly sensitive information here.</p>
+    </section>
+
+    <div id="signed-in" hidden>
+      <header class="topbar">
+        <div class="topbar-inner">
+          <div class="brand">Panel<span> Ready</span> · Interview Prep</div>
+          <nav class="nav" aria-label="Main navigation">
+            <button data-view="roles" class="active">Find roles</button>
+            <button data-view="profile">My profile</button>
+            <button data-view="progress">Track progress</button>
+          </nav>
+          <div class="user-tools"><span id="user-email"></span><button id="logout" class="btn">Log out</button></div>
+        </div>
+      </header>
+      <main class="wrap">
+        <div id="global-alert" class="alert" role="alert"></div>
+
+        <section id="view-roles" class="view active">
+          <div class="hero">
+            <h1>Find a role. Start preparing.</h1>
+            <p class="muted">Search public role listings, save the exact posting, then start a spoken mock interview tailored to your experience.</p>
+          </div>
+          <div class="grid two">
+            <section class="card">
+              <h2>Look up roles</h2>
+              <p class="muted small">Search uses public DuckDuckGo results. It is not a complete job board; verify each vacancy at its source.</p>
+              <form id="search-form">
+                <div class="role-search"><input id="role-query" placeholder="e.g. Data Scientist Oracle Bengaluru" required minlength="3" maxlength="200"><button class="btn primary" type="submit">Search</button></div>
+              </form>
+              <div id="search-alert" class="alert" role="alert"></div>
+              <div id="search-results" class="results"></div>
+            </section>
+            <section class="card">
+              <h2>Add a role or start general prep</h2>
+              <p class="muted small">Paste a job posting for targeted prep, or leave Company blank for a general interview not tied to one employer.</p>
+              <form id="role-form">
+                <div class="grid two">
+                  <div class="field"><label for="role-company">Company (optional)</label><input id="role-company" maxlength="200" placeholder="Leave blank for general prep"></div>
+                  <div class="field"><label for="role-title">Role / focus</label><input id="role-title" required maxlength="200" placeholder="General interview or Data Scientist"></div>
+                </div>
+                <div class="field"><label for="role-location">Location (optional)</label><input id="role-location" maxlength="200"></div>
+                <div class="field"><label for="role-url">Job posting URL (optional)</label><input id="role-url" type="url" maxlength="1000" placeholder="https://..."></div>
+                <div class="field"><label for="role-description">Job description / selected search-result details</label><textarea id="role-description" maxlength="30000" placeholder="Paste responsibilities and requirements. Avoid confidential details."></textarea></div>
+                <button class="btn primary" type="submit">Save role</button>
+              </form>
+            </section>
+          </div>
+          <section class="card" style="margin-top:15px">
+            <div class="between"><div><h2>Your saved roles</h2><p class="muted small">Choose Start Prep to begin a voice or typed mock interview.</p></div></div>
+            <div id="saved-roles" class="role-list"></div>
+          </section>
+        </section>
+
+        <section id="view-profile" class="view">
+          <div class="hero"><h1>Your interview context</h1><p class="muted">The interviewer uses your resume, LinkedIn details you provide, and the saved job description to ask relevant questions.</p></div>
+          <section class="card">
+            <div id="profile-alert" class="alert" role="alert"></div>
+            <form id="profile-form">
+              <div class="grid two">
+                <div class="field"><label for="profile-name">Name</label><input id="profile-name" maxlength="200"></div>
+                <div class="field"><label for="profile-location">Location</label><input id="profile-location" maxlength="200"></div>
+              </div>
+              <div class="field"><label for="linkedin-url">LinkedIn profile URL (saved only; not scraped)</label><input id="linkedin-url" type="url" placeholder="https://www.linkedin.com/in/..." maxlength="500"></div>
+              <div class="field"><label for="linkedin-text">LinkedIn profile text (optional; copy/paste only what you choose)</label><textarea id="linkedin-text" maxlength="30000" placeholder="Paste your headline, experience, or skills if you want them included."></textarea></div>
+              <div class="field">
+                <label for="resume-file">Upload resume (PDF, UTF-8 TXT, or Markdown; max 5 MB)</label>
+                <input id="resume-file" type="file" accept=".pdf,.txt,.md,application/pdf,text/plain">
+                <span id="resume-status" class="muted small">No readable resume text saved yet.</span>
+              </div>
+              <div class="field"><label for="resume-text">Resume text (review or paste here)</label><textarea id="resume-text" maxlength="30000" style="min-height:250px" placeholder="Paste resume text or upload a document above."></textarea></div>
+              <div class="row"><button class="btn primary" type="submit">Save profile</button><span class="muted small">Your profile is stored locally in this app's database.</span></div>
+            </form>
+          </section>
+        </section>
+
+        <section id="view-interview" class="view">
+          <div class="interview-shell">
+            <div class="interview-head between">
+              <div><h1 id="interview-title">Mock interview</h1><p id="interview-subtitle" class="muted small"></p><p id="interview-progress" class="muted small">Question 1 of 10</p></div>
+              <button id="finish-interview" class="btn danger">End interview · Track progress</button>
+            </div>
+            <div class="notice">This interview has 10 personalized questions in different topics, shuffled for variety. Groq scores each answer and may ask one follow-up when clarification would help; if you say you don’t know or haven’t done something, it moves on. Speak naturally or type your answer. Browser speech recognition may use browser-provider services. Don't share confidential information.</div>
+            <div id="interview-alert" class="alert" role="alert"></div>
+            <div id="interview-chat" class="chat" aria-live="polite"></div>
+            <form id="answer-form" class="answer-box">
+              <div class="field"><label for="answer-text">Your answer</label><textarea id="answer-text" maxlength="12000" placeholder="Your spoken answer will appear here. You can edit before sending."></textarea></div>
+              <div class="row">
+                <button id="mic-button" class="btn" type="button">🎙 Speak answer</button>
+                <button id="send-answer" class="btn primary" type="submit">Send answer</button>
+                <button id="retry-question" class="btn" type="button" hidden>Retry next question</button>
+                <button id="repeat-question" class="btn" type="button">Repeat question</button>
+              </div>
+              <p id="mic-status" class="muted small" style="margin:8px 0 0"></p>
+            </form>
+          </div>
+        </section>
+
+        <section id="view-progress" class="view">
+          <div class="hero"><h1>Track progress</h1><p class="muted">Your final role-readiness report and evidence-based practice blocks appear here after the interview. Mark a block complete when you feel ready, then keep practicing until interview day.</p></div>
+          <section id="final-report" class="card" hidden></section>
+          <div class="card">
+            <div class="between"><div><h2 id="progress-summary">Your review blocks</h2><p id="progress-role" class="muted small"></p></div><button class="btn" id="refresh-progress">Refresh</button></div>
+            <div class="progress-track"><div id="review-progress-fill" class="progress-fill"></div></div>
+            <div id="review-progress-text" class="muted small"></div>
+            <div id="review-categories"></div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <script>
+    "use strict";
+    const $ = selector => document.querySelector(selector);
+    const categories = [
+      ["resume", "Resume"],
+      ["company_aware", "Company-aware problems"],
+      ["technical", "Technical"],
+      ["hr", "HR"]
+    ];
+    let authMode = "login";
+    let savedRoles = [];
+    let activeInterviewId = null;
+    let activeTranscript = [];
+    let speechCapture = null;
+    let speechSupported = false;
+    let retryNeeded = false;
+    let interviewQuestionSetComplete = false;
+    let interviewQuestionNumber = 1;
+
+    function showAlert(target, message) {
+      const element = $(target);
+      element.textContent = message;
+      element.classList.remove("success");
+      element.classList.add("show");
+    }
+    function showSuccess(target, message) {
+      const element = $(target);
+      element.textContent = message;
+      element.classList.add("show", "success");
+    }
+    function clearAlert(target) {
+      const element = $(target);
+      element.textContent = "";
+      element.classList.remove("show");
+    }
+    async function api(path, options = {}) {
+      if (window.location.protocol === "file:") {
+        throw new Error("This page is opened directly as a file, so sign-in requests cannot reach Panel Ready. Start the app with the Uvicorn command in START-HERE.txt, then open http://127.0.0.1:8000.");
+      }
+      const response = await fetch(path, {
+        credentials: "same-origin",
+        ...options,
+        headers: {
+          ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+          ...(options.headers || {})
+        }
+      });
+      const data = response.status === 204 ? {} : await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.detail || `Request failed (${response.status}).`);
+      return data;
+    }
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      })[char]);
+    }
+    function safeUrl(value) {
+      try {
+        const parsed = new URL(value);
+        return ["http:", "https:"].includes(parsed.protocol) ? parsed.href : "";
+      } catch { return ""; }
+    }
+    function showView(name) {
+      document.querySelectorAll(".view").forEach(view => view.classList.remove("active"));
+      const selected = $(`#view-${name}`);
+      if (selected) selected.classList.add("active");
+      document.querySelectorAll(".nav [data-view]").forEach(button => {
+        button.classList.toggle("active", button.dataset.view === name);
+      });
+      if (name === "progress") loadProgress();
+    }
+    function authError(message) {
+      showAlert("#auth-alert", message);
+    }
+    function setAuthMode(mode) {
+      authMode = mode;
+      $("#show-login").classList.toggle("primary", mode === "login");
+      $("#show-signup").classList.toggle("primary", mode === "signup");
+      $("#auth-submit").textContent = mode === "login" ? "Log in" : "Create account";
+      $("#auth-password").autocomplete = mode === "login" ? "current-password" : "new-password";
+      clearAlert("#auth-alert");
+    }
+    async function showSignedIn(email) {
+      $("#auth-view").hidden = true;
+      $("#signed-in").hidden = false;
+      $("#user-email").textContent = email;
+      await Promise.all([loadProfile(), loadRoles()]);
+      await loadProgress();
+    }
+    async function checkSession() {
+      try {
+        const user = await api("/api/me");
+        await showSignedIn(user.email);
+      } catch {
+        $("#auth-view").hidden = false;
+        $("#signed-in").hidden = true;
+        if (window.location.protocol === "file:") {
+          showAlert("#auth-alert", "To use Panel Ready, start its local server with the Uvicorn command in START-HERE.txt, then open http://127.0.0.1:8000. Do not open this HTML file directly.");
+        }
+      }
+    }
+    $("#show-login").addEventListener("click", () => setAuthMode("login"));
+    $("#show-signup").addEventListener("click", () => setAuthMode("signup"));
+    $("#auth-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      clearAlert("#auth-alert");
+      const endpoint = authMode === "login" ? "/api/login" : "/api/signup";
+      try {
+        const user = await api(endpoint, {
+          method: "POST",
+          body: JSON.stringify({ email: $("#auth-email").value, password: $("#auth-password").value })
+        });
+        $("#auth-password").value = "";
+        await showSignedIn(user.email);
+      } catch (error) {
+        authError(error.message);
+      }
+    });
+    $("#logout").addEventListener("click", async () => {
+      try { await api("/api/logout", { method: "POST" }); } catch (error) { showAlert("#global-alert", error.message); }
+      $("#signed-in").hidden = true;
+      $("#auth-view").hidden = false;
+      setAuthMode("login");
+    });
+    document.querySelectorAll(".nav [data-view]").forEach(button =>
+      button.addEventListener("click", () => showView(button.dataset.view))
+    );
+
+    async function loadProfile() {
+      try {
+        const profile = await api("/api/profile");
+        $("#profile-name").value = profile.full_name || "";
+        $("#profile-location").value = profile.location || "";
+        $("#linkedin-url").value = profile.linkedin_url || "";
+        $("#linkedin-text").value = profile.linkedin_text || "";
+        $("#resume-text").value = profile.resume_text || "";
+        $("#resume-status").textContent = profile.resume_text
+          ? `${profile.resume_text.length.toLocaleString()} characters saved`
+          : "No readable resume text saved yet.";
+      } catch (error) { showAlert("#profile-alert", error.message); }
+    }
+    $("#profile-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      clearAlert("#profile-alert");
+      try {
+        await api("/api/profile", {
+          method: "PUT",
+          body: JSON.stringify({
+            full_name: $("#profile-name").value,
+            location: $("#profile-location").value,
+            linkedin_url: $("#linkedin-url").value,
+            linkedin_text: $("#linkedin-text").value,
+            resume_text: $("#resume-text").value
+          })
+        });
+        $("#resume-status").textContent = `${$("#resume-text").value.length.toLocaleString()} characters saved`;
+        showSuccess("#profile-alert", "Profile saved. Your resume and profile context are ready for mock interviews.");
+      } catch (error) { showAlert("#profile-alert", error.message); }
+    });
+    $("#resume-file").addEventListener("change", async event => {
+      const file = event.target.files[0];
+      if (!file) return;
+      clearAlert("#profile-alert");
+      $("#resume-status").textContent = `Uploading ${file.name}…`;
+      const form = new FormData();
+      form.append("file", file);
+      try {
+        const result = await api("/api/profile/resume", { method: "POST", body: form });
+        await loadProfile();
+        showAlert("#profile-alert", `Resume text extracted (${result.characters.toLocaleString()} characters). Review and save your profile.`);
+      } catch (error) {
+        $("#resume-status").textContent = "Upload failed. Your previously saved resume was not changed.";
+        showAlert("#profile-alert", error.message);
+      }
+      finally { event.target.value = ""; }
+    });
+
+    $("#search-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      clearAlert("#search-alert");
+      $("#search-results").innerHTML = `<div class="empty">Searching public job listings…</div>`;
+      try {
+        const results = await api(`/api/roles/search?q=${encodeURIComponent($("#role-query").value)}`);
+        if (!results.length) {
+          $("#search-results").innerHTML = `<div class="empty">No results found. Try a broader search or add a role manually.</div>`;
+          return;
+        }
+        $("#search-results").innerHTML = results.map(result => {
+          const url = safeUrl(result.url);
+          return `<article class="result">
+            <h3>${escapeHtml(result.title || "Job result")}</h3>
+            ${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Open original listing ↗</a>` : ""}
+            <p>${escapeHtml(result.snippet)}</p>
+            <button class="btn" type="button" data-use-result="${escapeHtml(result.url)}" data-title="${escapeHtml(result.title)}" data-snippet="${escapeHtml(result.snippet)}">Use this result</button>
+          </article>`;
+        }).join("");
+        $("#search-results").querySelectorAll("[data-use-result]").forEach(button => {
+          button.addEventListener("click", () => {
+            const query = $("#role-query").value.trim();
+            const company = query.match(/\b(?:at|@)\s+(.+?)(?:\s+(?:in|near)\s+.+)?$/i)?.[1] || "";
+            const title = button.dataset.title || query;
+            $("#role-company").value = company;
+            $("#role-title").value = title.slice(0, 200);
+            $("#role-url").value = button.dataset.useResult;
+            $("#role-description").value = button.dataset.snippet || "";
+            $("#role-title").focus();
+                showSuccess("#global-alert", "Review the company/title and add the full job description before saving this role.");
+          });
+        });
+      } catch (error) {
+        $("#search-results").innerHTML = "";
+        showAlert("#search-alert", error.message);
+      }
+    });
+    $("#role-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      try {
+        await api("/api/roles", {
+          method: "POST",
+          body: JSON.stringify({
+            company: $("#role-company").value,
+            title: $("#role-title").value,
+            location: $("#role-location").value,
+            url: $("#role-url").value,
+            description: $("#role-description").value
+          })
+        });
+        event.target.reset();
+        await loadRoles();
+        showSuccess("#global-alert", "Role saved. Start Prep when your profile and resume are ready.");
+      } catch (error) { showAlert("#global-alert", error.message); }
+    });
+    async function loadRoles() {
+      try {
+        savedRoles = await api("/api/roles");
+        if (!savedRoles.length) {
+          $("#saved-roles").innerHTML = `<div class="empty">No roles saved yet. Search above or add a role manually.</div>`;
+          return;
+        }
+        $("#saved-roles").innerHTML = savedRoles.map(role => {
+          const url = safeUrl(role.url);
+          return `<article class="role-card">
+            <div><h3>${escapeHtml(role.title)} · ${escapeHtml(role.company || "General prep")}</h3>
+              <div class="muted small">${escapeHtml(role.location || "Location not specified")} · ${role.interview_count} mock interview${role.interview_count === 1 ? "" : "s"}</div>
+              ${url ? `<a class="small" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">View job posting ↗</a>` : ""}
+            </div>
+            <button class="btn primary" data-start-role="${escapeHtml(role.id)}">Start Prep</button>
+          </article>`;
+        }).join("");
+        $("#saved-roles").querySelectorAll("[data-start-role]").forEach(button =>
+          button.addEventListener("click", () => startInterview(button.dataset.startRole, button))
+        );
+      } catch (error) { showAlert("#global-alert", error.message); }
+    }
+    async function startInterview(roleId, button) {
+      clearAlert("#global-alert");
+      try {
+        if (!$("#resume-text").value.trim()) {
+          await loadProfile();
+        }
+        if (!$("#resume-text").value.trim()) {
+          showAlert("#global-alert", "Add your resume in My profile before starting a tailored mock interview.");
+          showView("profile");
+          return;
+        }
+        button.disabled = true;
+        button.textContent = "Preparing…";
+        const interview = await api("/api/interviews", {
+          method: "POST",
+          body: JSON.stringify({ role_id: roleId })
+        });
+        activeInterviewId = interview.id;
+        activeTranscript = [{ speaker: "interviewer", question_kind: "planned", text: interview.question }];
+        retryNeeded = false;
+        interviewQuestionSetComplete = false;
+        interviewQuestionNumber = 1;
+        $("#final-report").hidden = true;
+        $("#answer-text").disabled = false;
+        $("#send-answer").disabled = false;
+        $("#mic-button").disabled = false;
+        const role = savedRoles.find(item => item.id === roleId);
+        $("#interview-title").textContent = "Mock interview";
+        $("#interview-subtitle").textContent = `${role?.title || ""} · ${role?.company || "General prep"}`;
+        $("#answer-text").value = "";
+        updateInterviewProgress();
+        $("#retry-question").hidden = true;
+        renderChat();
+        showView("interview");
+        if (interview.research_warning) {
+          showAlert("#interview-alert", interview.research_warning);
+        } else {
+          clearAlert("#interview-alert");
+        }
+        speak(interview.question);
+      } catch (error) {
+        const message = error.message === "Could not retrieve public research. Check your connection and retry."
+          ? "The server is still running an older version of Panel Ready. In its PowerShell window, press Ctrl+C, then restart it from the project folder using the commands in START-HERE.txt. Refresh this page and try Start Prep again."
+          : error.message;
+        showAlert("#global-alert", message);
+      } finally {
+        if (button) { button.disabled = false; button.textContent = "Start Prep"; }
+      }
+    }
+    function renderChat() {
+      $("#interview-chat").innerHTML = activeTranscript.map(turn => {
+        const speaker = turn.speaker === "candidate" ? "You" : turn.speaker === "coach" ? "Coach feedback" : "Interviewer";
+        return `<div class="bubble ${turn.speaker === "candidate" ? "candidate" : "interviewer"}"><span class="speaker">${speaker}</span>${escapeHtml(turn.text)}</div>`;
+      }
+      ).join("");
+      $("#interview-chat").scrollTop = $("#interview-chat").scrollHeight;
+    }
+    function updateInterviewProgress(completed = false) {
+      interviewQuestionSetComplete = completed;
+      const latestQuestion = [...activeTranscript].reverse().find(turn => turn.speaker === "interviewer");
+      $("#interview-progress").textContent = completed
+        ? "All 10 planned questions complete. End the interview to see your report."
+        : latestQuestion?.question_kind === "follow_up"
+          ? `Follow-up for question ${interviewQuestionNumber} of 10`
+          : `Question ${Math.min(interviewQuestionNumber, 10)} of 10`;
+      if (completed) {
+        $("#answer-text").disabled = true;
+        $("#send-answer").disabled = true;
+        $("#mic-button").disabled = true;
+        $("#mic-status").textContent = "The 10-topic interview is complete. End the interview to view your report.";
+      }
+    }
+    function appendCoachingResult(result) {
+      interviewQuestionNumber = result.question_number;
+      activeTranscript.push({ speaker: "coach", text: formatCoaching(result) });
+      if (result.question) {
+        activeTranscript.push({
+          speaker: "interviewer",
+          question_kind: result.question_kind || "planned",
+          text: result.question
+        });
+      }
+      updateInterviewProgress(result.interview_complete);
+      renderChat();
+      if (result.question) speak(result.question);
+    }
+    function formatCoaching(result) {
+      const labels = {
+        correct_detailed: "Correct and detailed",
+        correct_shallow: "Correct but shallow",
+        partially_correct: "Partially correct",
+        incorrect: "Incorrect",
+        not_answered: "Not answered"
+      };
+      const lines = [
+        `Answer review · ${result.score}/10 · ${labels[result.assessment] || "Reviewed"}`,
+        `What you got right: ${result.got_right}`,
+        result.missing ? `What to improve: ${result.missing}` : "",
+        `Stronger answer example: ${result.stronger_answer}`,
+        result.concept_explanation ? `Concept: ${result.concept_explanation}` : ""
+      ];
+      return lines.filter(Boolean).join("\n\n");
+    }
+    function speak(text) {
+      if (!("speechSynthesis" in window)) return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1;
+      window.speechSynthesis.speak(utterance);
+    }
+    function setBusy(busy) {
+      $("#send-answer").disabled = busy || interviewQuestionSetComplete;
+      $("#finish-interview").disabled = busy;
+      $("#send-answer").textContent = busy ? "Thinking…" : "Send answer";
+    }
+    $("#answer-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      clearAlert("#interview-alert");
+      const answer = $("#answer-text").value.trim();
+      if (!answer || !activeInterviewId) return;
+      setBusy(true);
+      try {
+        const result = await api(`/api/interviews/${encodeURIComponent(activeInterviewId)}/answer`, {
+          method: "POST", body: JSON.stringify({ answer })
+        });
+        activeTranscript.push({ speaker: "candidate", text: answer });
+        appendCoachingResult(result);
+        $("#answer-text").value = "";
+        retryNeeded = false;
+        $("#retry-question").hidden = true;
+      } catch (error) {
+        activeTranscript.push({ speaker: "candidate", text: answer });
+        $("#answer-text").value = "";
+        retryNeeded = true;
+        $("#retry-question").hidden = false;
+        renderChat();
+        updateInterviewProgress();
+        showAlert("#interview-alert", `${error.message} Your answer was saved. Use “Retry next question” to continue.`);
+      } finally { setBusy(false); }
+    });
+    $("#retry-question").addEventListener("click", async () => {
+      if (!retryNeeded) return;
+      clearAlert("#interview-alert");
+      $("#retry-question").disabled = true;
+      try {
+        const result = await api(`/api/interviews/${encodeURIComponent(activeInterviewId)}/next`, { method: "POST", body: "{}" });
+        appendCoachingResult(result);
+        retryNeeded = false;
+        $("#retry-question").hidden = true;
+      } catch (error) { showAlert("#interview-alert", error.message); }
+      finally { $("#retry-question").disabled = false; }
+    });
+    $("#repeat-question").addEventListener("click", () => {
+      const latest = [...activeTranscript].reverse().find(turn => turn.speaker === "interviewer");
+      if (latest) speak(latest.text);
+    });
+    function renderSpeechText(capture, interimText = "", currentFinalText = "") {
+      const spokenText = [capture.finalText, currentFinalText, interimText].filter(Boolean).join(" ").trim();
+      $("#answer-text").value = [capture.baseText, spokenText].filter(Boolean).join(" ").trim();
+    }
+    function stopSpeechCapture(message) {
+      const capture = speechCapture;
+      if (!capture) return;
+      capture.listening = false;
+      clearTimeout(capture.restartTimer);
+      if (capture.recognition && capture.started) capture.recognition.stop();
+      speechCapture = null;
+      $("#mic-button").textContent = "🎙 Speak answer";
+      $("#mic-status").textContent = message || ($("#answer-text").value.trim()
+        ? "Speech capture stopped. Your transcript is ready to review and send."
+        : capture.noSpeechCount
+          ? "No speech was detected. Check that the correct microphone is enabled and allowed for this page, then try again or type your answer."
+          : "Speech capture stopped without a transcript. Check microphone permission and try again, or type your answer.");
+    }
+    function startRecognitionSession(capture) {
+      if (!capture.listening || speechCapture !== capture) return;
+      const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new Recognition();
+      capture.recognition = recognition;
+      capture.started = false;
+      let sessionFinalText = "";
+      let sessionInterimText = "";
+      recognition.lang = "en-US";
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.onresult = event => {
+        sessionFinalText = "";
+        sessionInterimText = "";
+        for (let i = 0; i < event.results.length; i++) {
+          const result = event.results[i];
+          if (result.isFinal) sessionFinalText += result[0].transcript;
+          else sessionInterimText += result[0].transcript;
+        }
+        renderSpeechText(capture, sessionInterimText, sessionFinalText);
+      };
+      recognition.onerror = event => {
+        capture.lastError = event.error;
+      };
+      recognition.onaudiostart = () => {
+        $("#mic-status").textContent = "Microphone connected. Listening for speech…";
+      };
+      recognition.onend = () => {
+        if (capture.recognition !== recognition) return;
+        capture.finalText = [capture.finalText, sessionFinalText].filter(Boolean).join(" ").trim();
+        capture.interimText = "";
+        capture.started = false;
+        renderSpeechText(capture);
+        capture.recognition = null;
+        if (!capture.listening || speechCapture !== capture) return;
+        if (["not-allowed", "service-not-allowed", "audio-capture", "language-not-supported"].includes(capture.lastError)) {
+          const message = capture.lastError === "not-allowed" || capture.lastError === "service-not-allowed"
+            ? "Microphone access was blocked. Allow microphone access for this site in your browser settings, or type your answer."
+            : `Speech capture stopped (${capture.lastError}). Check your microphone/browser settings, then try again or type your answer.`;
+          stopSpeechCapture(message);
+          return;
+        }
+        if (capture.lastError && capture.lastError !== "no-speech" && capture.lastError !== "network" && capture.lastError !== "aborted") {
+          stopSpeechCapture(`Speech capture stopped (${capture.lastError}). Try again or type your answer.`);
+          return;
+        }
+        if (capture.lastError === "network") capture.networkRetries += 1;
+        else capture.networkRetries = 0;
+        if (capture.lastError === "no-speech") capture.noSpeechCount += 1;
+        if (capture.networkRetries > 5) {
+          stopSpeechCapture("Speech recognition could not reconnect. Check your internet connection, try again, or type your answer.");
+          return;
+        }
+        const delay = capture.lastError === "network"
+          ? Math.min(1000 * 2 ** (capture.networkRetries - 1), 8000)
+          : 300;
+        capture.lastError = "";
+        $("#mic-status").textContent = capture.finalText
+          ? "Listening… Your captured words are being kept."
+          : "Listening…";
+        capture.restartTimer = setTimeout(() => startRecognitionSession(capture), delay);
+      };
+      try {
+        recognition.start();
+        capture.started = true;
+      } catch (error) {
+        capture.recognition = null;
+        stopSpeechCapture(`Could not start speech recognition (${error.message}). Try again or type your answer.`);
+      }
+    }
+    $("#mic-button").addEventListener("click", async () => {
+      if (!speechSupported) {
+        showAlert("#interview-alert", "Speech recognition is not available in this browser. You can type your answer instead; try current Chrome or Edge for voice input.");
+        return;
+      }
+      if (speechCapture) {
+        stopSpeechCapture();
+        return;
+      }
+      if (navigator.permissions?.query) {
+        try {
+          const permission = await navigator.permissions.query({ name: "microphone" });
+          if (permission.state === "denied") {
+            $("#mic-status").textContent = location.protocol === "file:"
+              ? "Microphone access is blocked on this file page. Open Panel Ready at http://127.0.0.1:8000, then allow microphone access in the browser's site settings. Also check Windows Settings > Privacy & security > Microphone."
+              : "Microphone access is blocked for this site. Use the browser's site settings to allow the microphone, then check Windows Settings > Privacy & security > Microphone.";
+            return;
+          }
+        } catch {
+          // Some browsers do not expose microphone permission queries; recognition can still prompt.
+        }
+      }
+      const existingText = $("#answer-text").value.trim();
+      speechCapture = {
+        baseText: existingText,
+        finalText: "",
+        started: false,
+        lastError: "",
+        noSpeechCount: 0,
+        networkRetries: 0,
+        listening: true,
+        recognition: null,
+        restartTimer: null
+      };
+      $("#mic-button").textContent = "Stop speaking";
+      $("#mic-status").textContent = "Listening…";
+      startRecognitionSession(speechCapture);
+    });
+    speechSupported = Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
+
+    $("#finish-interview").addEventListener("click", async () => {
+      if (!activeInterviewId) return;
+      const answers = activeTranscript.filter(turn => turn.speaker === "candidate").length;
+      if (!answers) {
+        showAlert("#interview-alert", "Answer at least one question before ending the interview.");
+        return;
+      }
+      if (!confirm("End this mock interview and generate your final role-readiness report and evidence-based progress blocks?")) return;
+      clearAlert("#interview-alert");
+      setBusy(true);
+      $("#finish-interview").textContent = "Analyzing…";
+      try {
+        const result = await api(`/api/interviews/${encodeURIComponent(activeInterviewId)}/finish`, { method: "POST", body: "{}" });
+        renderFinalReport(result.report);
+        await loadProgress();
+        showView("progress");
+      } catch (error) { showAlert("#interview-alert", error.message); }
+      finally {
+        setBusy(false);
+        $("#finish-interview").textContent = "End interview · Track progress";
+      }
+    });
+    function renderFinalReport(report) {
+      const section = $("#final-report");
+      if (!report || !Number.isInteger(report.overall_score)) {
+        section.hidden = true;
+        return;
+      }
+      const list = values => Array.isArray(values) && values.length
+        ? `<ul>${values.map(value => `<li>${escapeHtml(value)}</li>`).join("")}</ul>`
+        : `<p class="muted small">No concerns evidenced in the answers.</p>`;
+      section.innerHTML = `
+        <div class="between"><div><h2>Final interview report</h2><p class="muted">Assessment based on your answers and the selected role.</p></div><span class="pill">${report.overall_score}/100</span></div>
+        <p><strong>Role readiness:</strong> ${escapeHtml(report.readiness)}</p>
+        <h3>Technical strengths</h3>${list(report.technical_strengths)}
+        <h3>Weaknesses and knowledge gaps</h3>${list(report.weaknesses)}
+        <h3>Resume claims to prepare to defend</h3>${list(report.resume_claims_to_defend)}
+        <h3>Topics to revise · highest priority first</h3>${list(report.priority_topics)}
+        <h3>Personalized preparation plan</h3>${list(report.preparation_plan)}
+        <h3>Answers to improve</h3>
+        ${Array.isArray(report.poor_answers) && report.poor_answers.length ? report.poor_answers.map(answer => `
+          <article class="review-item">
+            <div><p><strong>Question:</strong> ${escapeHtml(answer.question)}</p>
+              <p><strong>What to improve:</strong> ${escapeHtml(answer.issue)}</p>
+              <p><strong>Stronger answer:</strong> ${escapeHtml(answer.stronger_answer)}</p></div>
+          </article>`).join("") : `<p class="muted small">No poorly answered questions were identified.</p>`}
+      `;
+      section.hidden = false;
+    }
+    $("#refresh-progress").addEventListener("click", loadProgress);
+    async function loadProgress() {
+      try {
+        const items = await api("/api/review");
+        const done = items.filter(item => item.completed).length;
+        const percent = items.length ? Math.round(done / items.length * 100) : 0;
+        $("#review-progress-fill").style.width = `${percent}%`;
+        $("#review-progress-text").textContent = `${done} of ${items.length} review blocks completed · ${percent}%`;
+        $("#progress-summary").textContent = items.length ? "Your review blocks" : "No review blocks yet";
+        const interviews = await api("/api/interviews");
+        const latestReport = interviews.find(session =>
+          session.status === "completed" && Number.isInteger(session.report?.overall_score)
+        );
+        renderFinalReport(latestReport?.report);
+        $("#progress-role").textContent = interviews.length
+          ? `Recent sessions: ${interviews.slice(0, 3).map(session => `${session.company || "General prep"} · ${session.title}`).join("  |  ")}`
+          : "Finish a mock interview to generate personalized progress blocks.";
+        $("#review-categories").innerHTML = categories.map(([key, label]) => {
+          const grouped = items.filter(item => item.category === key);
+          const completed = grouped.filter(item => item.completed).length;
+          const content = grouped.length ? grouped.map(item => `
+            <article class="review-item ${item.completed ? "completed" : ""}">
+              <input type="checkbox" data-review="${escapeHtml(item.id)}" ${item.completed ? "checked" : ""} aria-label="Mark ${escapeHtml(item.title)} complete">
+              <div>
+                <h3>${escapeHtml(item.title)}</h3>
+                <p><strong>What to work on:</strong> ${escapeHtml(item.gap)}</p>
+                <p><strong>Next practice:</strong> ${escapeHtml(item.next_step)}</p>
+                ${item.sources.length ? `<ul class="sources">${item.sources.map(source => {
+                  const url = safeUrl(source);
+                  return url ? `<li><a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a></li>` : "";
+                }).join("")}</ul>` : ""}
+                <div class="muted small" style="margin-top:7px">Created ${escapeHtml(item.created_at.slice(0,10))}</div>
+              </div>
+            </article>`).join("")
+            : `<div class="empty">No gaps recorded in this section yet. It will populate only when an interview reveals something to work on.</div>`;
+          return `<section class="review-category">
+            <div class="review-category-head"><h2>${escapeHtml(label)}</h2><span class="pill">${completed}/${grouped.length} complete</span></div>
+            ${content}
+          </section>`;
+        }).join("");
+        $("#review-categories").querySelectorAll("[data-review]").forEach(box =>
+          box.addEventListener("change", async () => {
+            box.disabled = true;
+            try {
+              await api(`/api/review/${encodeURIComponent(box.dataset.review)}`, {
+                method: "PATCH", body: JSON.stringify({ completed: box.checked })
+              });
+              await loadProgress();
+            } catch (error) {
+              box.checked = !box.checked;
+              showAlert("#global-alert", error.message);
+            } finally { box.disabled = false; }
+          })
+        );
+      } catch (error) { showAlert("#global-alert", error.message); }
+    }
+    checkSession();
+  </script>
+</body>
+</html>

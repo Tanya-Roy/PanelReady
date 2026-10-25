@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: interview-agent
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT --workers 1
+    healthCheckPath: /healthz
+    disk:
+      name: interview-agent-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: groq/openai/gpt-oss-20b
+      - key: DATABASE_PATH
+        value: /var/data/interview_app.sqlite3
+      - key: COOKIE_SECURE
+        value: "true"
